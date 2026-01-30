@@ -17,10 +17,17 @@ style:
   MagicNumber:
     active: false
 
+naming:
+  FunctionNaming:
+    active: true
+    ignoreAnnotated:
+      - "Composable"
+
 complexity:
   LongParameterList:
     active: true
-    threshold: 8
+    functionThreshold: 8
+    constructorThreshold: 8
     ignoreDefaultParameters: true
 
 exceptions:

@@ -10,6 +10,18 @@ plugins {
     alias(libs.plugins.owasp)
 }
 
+buildscript {
+    configurations.named("classpath") {
+        resolutionStrategy {
+            force(
+                "org.bouncycastle:bcprov-jdk18on:1.77",
+                "org.bouncycastle:bcpkix-jdk18on:1.77",
+                "org.bouncycastle:bcutil-jdk18on:1.77",
+            )
+        }
+    }
+}
+
 subprojects {
     apply(plugin = "org.jlleitschuh.gradle.ktlint")
 
