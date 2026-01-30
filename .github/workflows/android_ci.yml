@@ -5,17 +5,25 @@ on:
   pull_request:
 
 jobs:
-  build:
+  validate-wrapper:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Validate Gradle Wrapper
         uses: gradle/wrapper-validation-action@v2
+
+  lint-dev:
+    if: github.event_name == 'pull_request' || github.ref != 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Set up JDK
         uses: actions/setup-java@v4
@@ -28,55 +36,216 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Lint (Dev)
-        if: github.event_name == 'pull_request' || github.ref != 'refs/heads/main'
         run: ./gradlew ktlintCheck lintDevDebug
 
+      - name: Upload Lint Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: project-garage-lint-dev-reports
+          path: app/build/reports/lint-results-devDebug*
+
+  lint-release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+          cache: "gradle"
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
+
       - name: Lint (Release)
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: ./gradlew ktlintCheck lintProdRelease
+
+      - name: Upload Lint Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: project-garage-lint-release-reports
+          path: app/build/reports/lint-results-prodRelease*
+
+  detekt:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+          cache: "gradle"
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
 
       - name: Detekt
         run: ./gradlew detekt
 
+      - name: Upload Detekt Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: project-garage-detekt-reports
+          path: app/build/reports/detekt/**
+
+  unit-tests-dev:
+    if: github.event_name == 'pull_request' || github.ref != 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+          cache: "gradle"
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
+
       - name: Unit tests + coverage (Dev)
-        if: github.event_name == 'pull_request' || github.ref != 'refs/heads/main'
         run: ./gradlew jacocoDevDebugReport
 
+      - name: Upload Test Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: project-garage-test-dev-reports
+          path: |
+            app/build/reports/tests/**
+            app/build/test-results/**
+            app/build/reports/jacoco/jacocoDevDebugReport/**
+
+  unit-tests-release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+          cache: "gradle"
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
+
       - name: Unit tests + coverage (Release)
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: ./gradlew jacocoProdReleaseReport
 
+      - name: Upload Test Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: project-garage-test-release-reports
+          path: |
+            app/build/reports/tests/**
+            app/build/test-results/**
+            app/build/reports/jacoco/jacocoProdReleaseReport/**
+
+  build-dev:
+    if: github.event_name == 'pull_request' || github.ref != 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+          cache: "gradle"
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
+
       - name: Build Dev APK
-        if: github.event_name == 'pull_request' || github.ref != 'refs/heads/main'
         run: ./gradlew assembleDevDebug
 
-      - name: Build Release APK
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: ./gradlew assembleProdRelease
-
-      - name: Dependency scan
-        run: ./gradlew dependencyCheckAnalyze
-
       - name: Upload Dev APK
-        if: github.event_name == 'pull_request' || github.ref != 'refs/heads/main'
         uses: actions/upload-artifact@v4
         with:
           name: project-garage-dev-apk
           path: app/build/outputs/apk/dev/debug/app-dev-debug.apk
 
+  build-release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+          cache: "gradle"
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
+
+      - name: Build Release APK
+        run: ./gradlew assembleProdRelease
+
       - name: Upload Release APK
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v4
         with:
           name: project-garage-release-apk
           path: app/build/outputs/apk/prod/release/app-prod-release.apk
 
-      - name: Upload Reports
+  dependency-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+          cache: "gradle"
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
+
+      - name: Dependency scan
+        run: ./gradlew dependencyCheckAnalyze
+
+      - name: Upload Dependency Reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: project-garage-reports
-          path: |
-            app/build/reports/**
-            app/build/test-results/**
-            build/reports/**
+          name: project-garage-dependency-reports
+          path: build/reports/dependency-check-report.*
