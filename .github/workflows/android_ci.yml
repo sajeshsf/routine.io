@@ -14,6 +14,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Validate Gradle Wrapper
+        uses: gradle/wrapper-validation-action@v2
+
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
@@ -32,13 +35,16 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: ./gradlew ktlintCheck lintProdRelease
 
-      - name: Unit tests (Dev)
-        if: github.event_name == 'pull_request' || github.ref != 'refs/heads/main'
-        run: ./gradlew testDevDebugUnitTest
+      - name: Detekt
+        run: ./gradlew detekt
 
-      - name: Unit tests (Release)
+      - name: Unit tests + coverage (Dev)
+        if: github.event_name == 'pull_request' || github.ref != 'refs/heads/main'
+        run: ./gradlew jacocoDevDebugReport
+
+      - name: Unit tests + coverage (Release)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: ./gradlew testProdReleaseUnitTest
+        run: ./gradlew jacocoProdReleaseReport
 
       - name: Build Dev APK
         if: github.event_name == 'pull_request' || github.ref != 'refs/heads/main'
@@ -64,3 +70,13 @@ jobs:
         with:
           name: project-garage-release-apk
           path: app/build/outputs/apk/prod/release/app-prod-release.apk
+
+      - name: Upload Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: project-garage-reports
+          path: |
+            app/build/reports/**
+            app/build/test-results/**
+            build/reports/**
