@@ -2,7 +2,6 @@ name: Android CI
 
 on:
   push:
-    branches: [ "main" ]
   pull_request:
 
 jobs:
@@ -25,20 +24,43 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
 
-      - name: Lint (Android + ktlint)
-        run: ./gradlew ktlintCheck lintDebug
+      - name: Lint (Dev)
+        if: github.event_name == 'pull_request' || github.ref != 'refs/heads/main'
+        run: ./gradlew ktlintCheck lintDevDebug
 
-      - name: Unit tests
-        run: ./gradlew testDebugUnitTest
+      - name: Lint (Release)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: ./gradlew ktlintCheck lintProdRelease
 
-      - name: Build Debug APK
-        run: ./gradlew assembleDebug
+      - name: Unit tests (Dev)
+        if: github.event_name == 'pull_request' || github.ref != 'refs/heads/main'
+        run: ./gradlew testDevDebugUnitTest
+
+      - name: Unit tests (Release)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: ./gradlew testProdReleaseUnitTest
+
+      - name: Build Dev APK
+        if: github.event_name == 'pull_request' || github.ref != 'refs/heads/main'
+        run: ./gradlew assembleDevDebug
+
+      - name: Build Release APK
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: ./gradlew assembleProdRelease
 
       - name: Dependency scan
         run: ./gradlew dependencyCheckAnalyze
 
-      - name: Upload Debug APK
+      - name: Upload Dev APK
+        if: github.event_name == 'pull_request' || github.ref != 'refs/heads/main'
         uses: actions/upload-artifact@v4
         with:
-          name: project-garage-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: project-garage-dev-apk
+          path: app/build/outputs/apk/dev/debug/app-dev-debug.apk
+
+      - name: Upload Release APK
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: project-garage-release-apk
+          path: app/build/outputs/apk/prod/release/app-prod-release.apk
