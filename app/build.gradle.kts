@@ -1,11 +1,15 @@
 @file:Suppress("DSL_SCOPE_VIOLATION")
 
+import org.gradle.testing.jacoco.tasks.JacocoReport
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.kapt)
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.detekt)
+    jacoco
 }
 
 android {
@@ -26,6 +30,9 @@ android {
     }
 
     buildTypes {
+        debug {
+            enableUnitTestCoverage = true
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
@@ -62,6 +69,18 @@ android {
     }
     composeOptions {
         kotlinCompilerExtensionVersion = libs.versions.composeCompiler.get()
+    }
+
+    lint {
+        abortOnError = true
+        warningsAsErrors = true
+        checkDependencies = true
+        htmlReport = true
+        xmlReport = true
+    }
+
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
     }
 
     packaging {
@@ -105,4 +124,94 @@ dependencies {
 
 kapt {
     correctErrorTypes = true
+}
+
+jacoco {
+    toolVersion = "0.8.14"
+}
+
+detekt {
+    buildUponDefaultConfig = true
+    allRules = false
+    config.setFrom(files("$rootDir/config/detekt/detekt.yml"))
+    basePath = rootDir.absolutePath
+}
+
+tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+        txt.required.set(true)
+        sarif.required.set(true)
+    }
+}
+
+val coverageExclusions = listOf(
+    "**/R.class",
+    "**/R$*.class",
+    "**/BuildConfig.*",
+    "**/Manifest*.*",
+    "**/*Test*.*",
+    "android/**/*.*"
+)
+
+fun registerJacocoReportTask(
+    name: String,
+    variant: String,
+    testTaskName: String
+) {
+    tasks.register<JacocoReport>(name) {
+        dependsOn(testTaskName)
+
+        val kotlinClasses = fileTree("$buildDir/tmp/kotlin-classes/$variant") {
+            exclude(coverageExclusions)
+        }
+        val javaClasses = fileTree("$buildDir/intermediates/javac/$variant/classes") {
+            exclude(coverageExclusions)
+        }
+
+        classDirectories.setFrom(files(kotlinClasses, javaClasses))
+        sourceDirectories.setFrom(
+            files(
+                "src/main/java",
+                "src/main/kotlin",
+                "src/dev/java",
+                "src/dev/kotlin",
+                "src/prod/java",
+                "src/prod/kotlin",
+                "src/debug/java",
+                "src/debug/kotlin",
+                "src/release/java",
+                "src/release/kotlin",
+                "src/$variant/java",
+                "src/$variant/kotlin"
+            )
+        )
+        executionData.setFrom(
+            fileTree(buildDir) {
+                include("**/*.exec", "**/*.ec")
+            }
+        )
+
+        reports {
+            xml.required.set(true)
+            html.required.set(true)
+        }
+    }
+}
+
+registerJacocoReportTask(
+    name = "jacocoDevDebugReport",
+    variant = "devDebug",
+    testTaskName = "testDevDebugUnitTest"
+)
+
+registerJacocoReportTask(
+    name = "jacocoProdReleaseReport",
+    variant = "prodRelease",
+    testTaskName = "testProdReleaseUnitTest"
+)
+
+tasks.named("check") {
+    dependsOn("detekt")
 }

@@ -1,0 +1,28 @@
+build:
+  maxIssues: 0
+  weights:
+    complexity: 2
+    LongParameterList: 1
+    style: 1
+
+config:
+  validation: true
+
+processors:
+  active: true
+  exclude:
+    - "DetektProgressListener"
+
+style:
+  MagicNumber:
+    active: false
+
+complexity:
+  LongParameterList:
+    active: true
+    threshold: 8
+    ignoreDefaultParameters: true
+
+exceptions:
+  TooGenericExceptionCaught:
+    active: true
