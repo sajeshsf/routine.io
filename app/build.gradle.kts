@@ -37,7 +37,7 @@ android {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
             )
         }
     }
@@ -146,29 +146,32 @@ tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
     }
 }
 
-val coverageExclusions = listOf(
-    "**/R.class",
-    "**/R$*.class",
-    "**/BuildConfig.*",
-    "**/Manifest*.*",
-    "**/*Test*.*",
-    "android/**/*.*"
-)
+val coverageExclusions =
+    listOf(
+        "**/R.class",
+        "**/R$*.class",
+        "**/BuildConfig.*",
+        "**/Manifest*.*",
+        "**/*Test*.*",
+        "android/**/*.*",
+    )
 
 fun registerJacocoReportTask(
     name: String,
     variant: String,
-    testTaskName: String
+    testTaskName: String,
 ) {
     tasks.register<JacocoReport>(name) {
         dependsOn(testTaskName)
 
-        val kotlinClasses = fileTree("$buildDir/tmp/kotlin-classes/$variant") {
-            exclude(coverageExclusions)
-        }
-        val javaClasses = fileTree("$buildDir/intermediates/javac/$variant/classes") {
-            exclude(coverageExclusions)
-        }
+        val kotlinClasses =
+            fileTree("$buildDir/tmp/kotlin-classes/$variant") {
+                exclude(coverageExclusions)
+            }
+        val javaClasses =
+            fileTree("$buildDir/intermediates/javac/$variant/classes") {
+                exclude(coverageExclusions)
+            }
 
         classDirectories.setFrom(files(kotlinClasses, javaClasses))
         sourceDirectories.setFrom(
@@ -184,13 +187,13 @@ fun registerJacocoReportTask(
                 "src/release/java",
                 "src/release/kotlin",
                 "src/$variant/java",
-                "src/$variant/kotlin"
-            )
+                "src/$variant/kotlin",
+            ),
         )
         executionData.setFrom(
             fileTree(buildDir) {
                 include("**/*.exec", "**/*.ec")
-            }
+            },
         )
 
         reports {
@@ -203,13 +206,13 @@ fun registerJacocoReportTask(
 registerJacocoReportTask(
     name = "jacocoDevDebugReport",
     variant = "devDebug",
-    testTaskName = "testDevDebugUnitTest"
+    testTaskName = "testDevDebugUnitTest",
 )
 
 registerJacocoReportTask(
     name = "jacocoProdReleaseReport",
     variant = "prodRelease",
-    testTaskName = "testProdReleaseUnitTest"
+    testTaskName = "testProdReleaseUnitTest",
 )
 
 tasks.named("check") {
