@@ -9,9 +9,10 @@ import org.junit.runner.RunWith
 class ExampleInstrumentedTest {
     @Test
     fun useAppContext() {
-        val context = androidx.test.platform.app.InstrumentationRegistry
-            .getInstrumentation()
-            .targetContext
+        val context =
+            androidx.test.platform.app.InstrumentationRegistry
+                .getInstrumentation()
+                .targetContext
         assertEquals("com.projectgarage", context.packageName)
     }
 }
